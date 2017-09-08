@@ -1,0 +1,148 @@
+<!DOCTYPE html >
+<head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8"/>
+    <title>Trainspotting</title>
+    <style>
+        /* Always set the map height explicitly to define the size of the div
+         * element that contains the map. */
+        #map {
+            height: 100%;
+        }
+        /* Optional: Makes the sample page fill the window. */
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: "Gill Sans";
+        }
+        h1,h2,h3,h4,h5,h6 {
+            text-decoration: none;text-shadow: none;
+        }
+        #header {
+            padding:35px 40px;
+            margin:0 -15px;
+            background-image:url('image/header2.png');
+            background-size:620px;
+            background-repeat:no-repeat;
+            background-color: #001e3f;
+            height:160px;
+        }
+        .google-wrapper {
+            margin:0 -15px;
+            position: relative;
+            height:750px;
+        }
+        #google-map {
+            width:100%;
+            height:100%;
+        }
+
+        .train-info {
+            padding:15px;
+        }
+
+        .important-info {
+            font-size:22px;
+        }
+    </style>
+    <link rel="stylesheet" href="css/bootstrap-grid.css">
+    <link rel="stylesheet" href="css/bootstrap.css">
+    <link rel="stylesheet" href="css/bootstrap-reboot.css">
+    <script src="js/bootstrap.min.js"></script>
+    <script src="js/jquery-3.2.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.3/socket.io.js"></script>
+</head>
+
+
+<body>
+<div class="container-fluid">
+    <div id="header">
+
+    </div>
+    <div class="row">
+        <div class="google-wrapper col-md-9">
+            <div id="google-map"></div>
+
+        </div>
+        <div class="train-info col-md-3">
+            <h3>Tåginformation</h3>
+            <div class="info">
+                Klicka på ett tåg för att få mer information.
+            </div>
+        </div>
+        <script defer
+                src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAWACxZjYTsjOb2dh2bzOxw6fkPY8er2Vg">
+        </script>
+    </div>
+</div>
+
+
+<script type="text/javascript">
+    var extraMessage = {destination: 'Stockholm', arrival:'05.23'};
+  $(document).ready(function() {
+    var markers = {};
+    var iconUrl = 'image/train-icon.png';
+    var lulea = {lat: 65.583587, lng: 22.158084};
+
+    var map = new google.maps.Map(document.getElementById('google-map'), {
+      zoom: 6,
+      center: lulea,
+      mapTypeId: 'roadmap'
+    });
+
+    //const socket = io('http://3afb2dc2.ngrok.io/');
+    const socket = io('http://localhost:8080');
+    socket.on('hej', (message) => {
+      message = JSON.parse(message);
+   // console.log(message);
+    if(markers[message.trainID]) {
+      markers[message.trainID].setMap(null);
+    }
+    var time = 2 + +message.time.substring(0,2) + ":" + message.time.substring(2,4) + ":" + message.time.substring(4,6);
+    var myLatlng = new google.maps.LatLng(message.latitude, message.longitude);
+    var contentString = "<table>" +
+                        "<tr class='important-info'><td><b>Slutdestination:</b></td><td>" + extraMessage.destination +  "</td></tr>" +
+                        "<tr class='important-info'><td><b>Beräknad ankomst:</b></td><td>" + extraMessage.arrival +  "</td></tr>" +
+                        "<tr><td><b>Tåg:</b></td><td>" + message.trainID + "</td></tr>" +
+                        "<tr><td><b>Hastighet:</b></td><td>" + message.speed + " km/h</td></tr>" +
+                        "<tr><td><b>Riktning:</b></td><td>" + message.course +  "°</td></tr>" +
+                        "<tr><td><b>Senast uppdaterat:</b></td><td>" + time +  "</td></tr>" +
+                        "</table>";
+    var marker = new google.maps.Marker({
+      position: myLatlng,
+      title: message.trainID,
+      icon: iconUrl,
+      html: contentString
+    })
+    marker.setMap(map);
+    markers[message.trainID] = marker;
+    google.maps.event.addListener(marker, 'click', function() {
+      $('.info').html(this.html)
+        .attr('class', 'info ' + this.title);
+    })
+
+    if($('.info').hasClass(marker.title)){
+      $('.info').html(marker.html);
+    }
+    //console.log(message)
+  });
+
+
+      /*[
+       {
+       id: "GPRMC",
+       time: "122633.0",
+       valid: "A",
+       latitude: "62.48589488",
+       longitude: "17.32998210",
+       speed: 0,
+       course: 196.1,
+       date: "080917",
+       mode: "E",
+       variation: 0
+       }];*/
+  });
+</script>
+</body>
+</html>
