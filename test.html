@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.3/socket.io.js"></script>
+</head>
+<body>
+
+<script>
+  const socket = io('http://3afb2dc2.ngrok.io/');
+  socket.on('hej', (message) => {
+    console.log(message);
+  });
+</script>
+</body>
+</html>
