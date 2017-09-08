@@ -7,6 +7,7 @@ import WebSocket from 'ws';
 import nmea from 'nmea-0183';
 import socket from 'socket.io';
 import socketHandler from './socket/socket';
+import path from 'path';
 import ioClient from 'socket.io-client';
 
 const app = express();
@@ -34,6 +35,12 @@ mongoose.connect(config.mongodbUri, (error) => {
   }
 });
 
+
+app.get('/',function(req,res){
+
+  res.sendFile(path.join(__dirname+'/test.html'));
+
+});
 
 
 
