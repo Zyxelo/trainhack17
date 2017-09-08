@@ -51,14 +51,18 @@ io.on('connection', socketHandler);
 
 
 
-
+var testObject = [];
 const ws = new WebSocket('wss://api.oxyfi.com/trainpos/listen?v=1&key=7f2aeb563f024f778c5d27f7e1003f08');
 
 ws.on('message', (data) => {
 
   var GPGGAObject = nmea.parse(data)
   var trainInfo = data.split(',');
-  GPGGAObject.trainID = trainInfo[14];
+
+  GPGGAObject.trainID = trainInfo[16].split('.')[0];
   GPGGAObject.publicTrainID = trainInfo[16];
-  io.emit('hej', JSON.stringify(GPGGAObject, null, 2));
+  if (trainInfo[16]) {
+    //trainInfo[16].split('.')[0]);
+    io.emit('hej', JSON.stringify(GPGGAObject, null, 2));
+  }
 })
