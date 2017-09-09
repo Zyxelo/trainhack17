@@ -39,11 +39,29 @@
         }
 
         .train-info {
-            padding:15px;
+            padding:15px 25px 15px 15px;
         }
 
         .important-info {
-            font-size:22px;
+            font-size:18px;
+        }
+
+        #phone {
+            height:45px;
+        }
+
+        .search-row {
+            margin:15px 15px 15px 25px;
+            padding:0 15px;
+        }
+
+        button:not(:hover){
+            background:#df9d00 !important;
+            border:1px #ccc!important;
+        }
+        button:hover{
+            background:#d0960c !important;
+            border:1px #ccc!important;
         }
     </style>
     <link rel="stylesheet" href="css/bootstrap-grid.css">
@@ -66,10 +84,23 @@
 
         </div>
         <div class="train-info col-md-3">
+            <div class="row search-row">
+                <h3>Sök efter tågnummer</h3>
+                <input type="text" id="search" class="col-md-9" name="search" placeholder="Tågnummer">
+                <button type="submit" class="col-md-3 btn btn-primary" id="searchButton">Sök</button>
+            </div>
             <h3>Tåginformation</h3>
+            <div class="head-info">
+                <table>
+                    <tr class='important-info'><td><b>Slutdestination: </b></td><td class='destination'></td></tr>
+                    <tr class='important-info'><td><b>Ankomsttid:</b></td><td class='destination-time'></td></tr>
+                </table>
+            </div>
+            <hr>
             <div class="info">
                 Klicka på ett tåg för att få mer information.
             </div>
+            <div class="contact"></div>
         </div>
         <script defer
                 src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAWACxZjYTsjOb2dh2bzOxw6fkPY8er2Vg">
@@ -79,20 +110,142 @@
 
 
 <script type="text/javascript">
-    var extraMessage = {destination: 'Stockholm', arrival:'05.23'};
+  var mapStyle = [
+    {elementType: 'geometry', stylers: [{color: '#242f3e'}]},
+    {elementType: 'labels.text.stroke', stylers: [{color: '#242f3e'}]},
+    {elementType: 'labels.text.fill', stylers: [{color: '#746855'}]},
+    {
+      featureType: 'administrative.locality',
+      elementType: 'labels.text.fill',
+      stylers: [{color: '#d59563'}]
+    },
+    {
+      featureType: 'poi',
+      elementType: 'labels.text.fill',
+      stylers: [{color: '#d59563'}]
+    },
+    {
+      featureType: 'poi.park',
+      elementType: 'geometry',
+      stylers: [{color: '#263c3f'}]
+    },
+    {
+      featureType: 'poi.park',
+      elementType: 'labels.text.fill',
+      stylers: [{color: '#6b9a76'}]
+    },
+    {
+      featureType: 'road',
+      elementType: 'geometry',
+      stylers: [{color: '#38414e'}]
+    },
+    {
+      featureType: 'road',
+      elementType: 'geometry.stroke',
+      stylers: [{color: '#212a37'}]
+    },
+    {
+      featureType: 'road',
+      elementType: 'labels.text.fill',
+      stylers: [{color: '#9ca5b3'}]
+    },
+    {
+      featureType: 'road.highway',
+      elementType: 'geometry',
+      stylers: [{color: '#746855'}]
+    },
+    {
+      featureType: 'road.highway',
+      elementType: 'geometry.stroke',
+      stylers: [{color: '#1f2835'}]
+    },
+    {
+      featureType: 'road.highway',
+      elementType: 'labels.text.fill',
+      stylers: [{color: '#f3d19c'}]
+    },
+    {
+      featureType: 'transit',
+      elementType: 'geometry',
+      stylers: [{color: '#2f3948'}]
+    },
+    {
+      featureType: 'transit.station',
+      elementType: 'labels.text.fill',
+      stylers: [{color: '#d59563'}]
+    },
+    {
+      featureType: 'water',
+      elementType: 'geometry',
+      stylers: [{color: '#17263c'}]
+    },
+    {
+      featureType: 'water',
+      elementType: 'labels.text.fill',
+      stylers: [{color: '#515c6d'}]
+    },
+    {
+      featureType: 'water',
+      elementType: 'labels.text.stroke',
+      stylers: [{color: '#17263c'}]
+    }
+  ];
+
+
+  var trainPlan = [];
+  var Stations = new Array();
   $(document).ready(function() {
+
+    var xmlRequest = "<REQUEST>" +
+      // Use your valid authenticationkey
+      "<LOGIN authenticationkey='6255f4ebaa394cce9cbdfcb2c58c6859' />" +
+      "<QUERY objecttype='TrainStation'>" +
+      "<FILTER/>" +
+      "<INCLUDE>Geometry.WGS84</INCLUDE>" +
+      "<INCLUDE>AdvertisedLocationName</INCLUDE>" +
+      "<INCLUDE>LocationSignature</INCLUDE>" +
+      "</QUERY>" +
+      "</REQUEST>";
+    $.ajax({
+      url: "http://api.trafikinfo.trafikverket.se/v1/data.json",
+      type: "POST",
+      contentType: "text/xml",
+      dataType: "json",
+      data: xmlRequest,
+      success: function (response) {
+        if (response == null) return;
+        try {
+
+          $(response.RESPONSE.RESULT[0].TrainStation).each(function (iterator, item) {
+
+           // console.log(item);
+            // Save a key/value list of stations
+            var latLongArray = item.Geometry.WGS84.split('(')[1].split(')')[0].split(' ');
+
+            Stations[item.LocationSignature] = {name: item.AdvertisedLocationName, lng: latLongArray[0], lat: latLongArray[1] };
+            // Create an array to fill the search field autocomplete.
+
+          });
+
+        }
+        catch (ex) { }
+      }
+    });
+
     var markers = {};
     var iconUrl = 'image/train-icon.png';
-    var lulea = {lat: 65.583587, lng: 22.158084};
-
+    var iconMarkedUrl = 'image/train-icon-marked.png';
+    var lulea = {lat: 60.982587, lng: 13.808084};
+    var course;
     var map = new google.maps.Map(document.getElementById('google-map'), {
       zoom: 6,
       center: lulea,
-      mapTypeId: 'roadmap'
+      mapTypeId: 'roadmap',
+      styles: mapStyle
     });
 
     //const socket = io('http://3afb2dc2.ngrok.io/');
-    const socket = io($(location).attr('href'));
+    const socket = io('http://localhost:8080');
     socket.on('hej', (message) => {
       message = JSON.parse(message);
    // console.log(message);
@@ -102,47 +255,228 @@
     var time = 2 + +message.time.substring(0,2) + ":" + message.time.substring(2,4) + ":" + message.time.substring(4,6);
     var myLatlng = new google.maps.LatLng(message.latitude, message.longitude);
     var contentString = "<table>" +
-                        "<tr class='important-info'><td><b>Slutdestination:</b></td><td>" + extraMessage.destination +  "</td></tr>" +
-                        "<tr class='important-info'><td><b>Beräknad ankomst:</b></td><td>" + extraMessage.arrival +  "</td></tr>" +
                         "<tr><td><b>Tåg:</b></td><td>" + message.trainID + "</td></tr>" +
                         "<tr><td><b>Hastighet:</b></td><td>" + message.speed + " km/h</td></tr>" +
                         "<tr><td><b>Riktning:</b></td><td>" + message.course +  "°</td></tr>" +
                         "<tr><td><b>Senast uppdaterat:</b></td><td>" + time +  "</td></tr>" +
                         "</table>";
+    var extraString =   "<br/><br/>Meddela mig när tåget närmar sig slutdestination<br/>" +
+                        "<input type='phone' class='col-md-9' id='phone' name='phone' placeholder='Mobilnummer'/>" +
+                        "<input type='hidden' name='hiddenTrainId' id='hiddenTrainId' value='" + message.trainID + "'/>" +
+                        "<button type='submit' class='col-md-3 btn btn-primary' id='sendSMS' style='height:45px;'>Skicka</button><br/>" +
+                        "<input type='radio' name='delay'/>  <label for='delay'>Meddela mig vid förseningar</label>";
     var marker = new google.maps.Marker({
       position: myLatlng,
       title: message.trainID,
       icon: iconUrl,
-      html: contentString
+      html: contentString,
+      contactHtml: extraString,
     })
-    marker.setMap(map);
-    markers[message.trainID] = marker;
+
+
+
     google.maps.event.addListener(marker, 'click', function() {
       $('.info').html(this.html)
         .attr('class', 'info ' + this.title);
+      $('.contact').html(this.contactHtml);
+      $('.head-info').html(this.headHtml);
+      trainAnnouncement(marker.title, 'TrainAnnouncement');
+
+      getStations(marker.title);
+      if(course){
+        course.setMap(null);
+      }
+      course = new google.maps.Polyline({
+        path: trainPlan,
+        geodesic: true,
+        strokeColor: '#ffb400',
+        strokeOpacity: 1.0,
+        strokeWeight: 2
+      });
+
+      course.setMap(map);
+
+
     })
 
     if($('.info').hasClass(marker.title)){
       $('.info').html(marker.html);
+      marker.icon = iconMarkedUrl;
     }
+
+      marker.setMap(map);
+      markers[message.trainID] = marker;
     //console.log(message)
-  });
 
 
-      /*[
-       {
-       id: "GPRMC",
-       time: "122633.0",
-       valid: "A",
-       latitude: "62.48589488",
-       longitude: "17.32998210",
-       speed: 0,
-       course: 196.1,
-       date: "080917",
-       mode: "E",
-       variation: 0
-       }];*/
   });
+    //Search
+    $('#searchButton').on("click", function() {
+      var trainId = $('#search').val();
+      $('.info').attr('class', 'info ' + trainId);
+      trainAnnouncement(trainId);
+      // $('#search').val('');
+    });
+    $('#search').keypress(function(e){
+      if(e.which==13) {
+        $('#searchButton').click();
+      }
+    });
+
+    //SMS
+    $('#sendSMS').on('click', function() {
+      var number = $('#phone').val();
+      var trainId = $('#hiddenTrainId').val();
+      var destination = $('.destination').text();
+      var username = 'uea9bdf84bc247d5653c0a988e3179593';
+      var password = '77BD627C583C5B55B1ED2DCAB02DB29E';
+      var postFields = {
+        from:    "Trnspotting",
+        to:      number,
+        message: "Hej! Du kommer nu få information om när tåg nummer " + trainId + " närmar sig " + destination
+      }
+      console.log(postFields);
+      $.ajax({
+        url: "https://api.46elks.com/a1/SMS",
+        type: "POST",
+        crossDomain: true,
+        dataType: "json",
+        contentType: "application/json; charset=utf-8",
+        async: false,
+        beforeSend: function (xhr) {
+          xhr.setRequestHeader ("Authorization", "Basic " + btoa(username + ":" + password));
+          xhr.setRequestHeader("X-Mobile", "false");
+        },
+        data: postFields,
+        success: function(response) {
+          console.log(response);
+        }
+      })
+    });
+  });
+
+  function trainStation(id) {
+    var xmlRequest = "<REQUEST>" +
+      "<LOGIN authenticationkey='6255f4ebaa394cce9cbdfcb2c58c6859' />" +
+      "<QUERY objecttype='TrainStation'>" +
+      "<FILTER>" +
+      "<EQ name='LocationSignature' value='" + id + "' />" +
+      "</FILTER>" +
+      "</QUERY>" +
+      "</REQUEST>";
+    $.ajax({
+      url: "http://api.trafikinfo.trafikverket.se/v1.2/data.json",
+      type: "POST",
+      contentType: "text/xml",
+      dataType: "json",
+      data: xmlRequest,
+      success: function (response) {
+        console.log(response);
+        if (response == null) return;
+        var result = response.RESPONSE.RESULT[0].TrainStation;
+        if (result == null)
+          jQuery("#timeTableDeparture tr:last").
+          after("<tr><td colspan='4'>Inga avgångar hittades</td></tr>");
+        try {
+          console.log(result);
+          $('.destination').html(result[0].AdvertisedLocationName);
+        }
+        catch (ex) { }
+      }
+    });
+  }
+  function trainAnnouncement(id) {
+
+    var xmlRequest = "<REQUEST version='1.0'>" +
+      "<LOGIN authenticationkey='6255f4ebaa394cce9cbdfcb2c58c6859' />" +
+      "<QUERY objecttype='TrainAnnouncement'  orderby='AdvertisedTimeAtLocation desc'>"+
+      "<FILTER>"+
+      "<EQ name= 'AdvertisedTrainIdent' value='" + id + "'/>" +
+      "</FILTER>"+
+      "</QUERY>"+
+      "</REQUEST>";
+    $.ajax({
+      url: "http://api.trafikinfo.trafikverket.se/v1.2/data.json",
+      type: "POST",
+      contentType: "text/xml",
+      dataType: "json",
+      data: xmlRequest,
+      success: function (response) {
+        console.log(response);
+        if (response == null) return;
+        var result = response.RESPONSE.RESULT[0].TrainAnnouncement;
+        if (result == null)
+          jQuery("#timeTableDeparture tr:last").
+          after("<tr><td colspan='4'>Inga avgångar hittades</td></tr>");
+        try {
+          var time = result[0].AdvertisedTimeAtLocation;
+          $('.destination-time').html(time.substring(0,10) + " " + time.substring(11,16));
+          trainStation(result[0].ToLocation[0].LocationName);
+        }
+        catch (ex) { }
+      }
+    });
+  }
+
+  function getStations(id) {
+    var destinations = [];
+    var uniqueList = {};
+    var destinations = [];
+    var xmlRequest = "<REQUEST version='1.0'>" +
+      "<LOGIN authenticationkey='6255f4ebaa394cce9cbdfcb2c58c6859' />" +
+      "<QUERY objecttype='TrainAnnouncement' " +
+      "orderby='AdvertisedTimeAtLocation' >" +
+      "<FILTER>" +
+
+
+      "<EQ name='AdvertisedTrainIdent' value='"+id+"' />" +
+
+      "</FILTER>" +
+      // Just include wanted fields to reduce response size.
+      "<INCLUDE>TechnicalTrainIdent</INCLUDE>" +
+      "<INCLUDE>AdvertisedTimeAtLocation</INCLUDE>" +
+      "<INCLUDE>LocationSignature</INCLUDE>" +
+      "<INCLUDE>FromLocation</INCLUDE>" +
+      "<INCLUDE>ToLocation</INCLUDE>" +
+      "<INCLUDE>ScheduledDepartureDateTime</INCLUDE>" +
+      "</QUERY>" +
+      "</REQUEST>";
+    $.ajax({
+      url: "http://api.trafikinfo.trafikverket.se/v1/data.json",
+      type: "POST",
+      contentType: "text/xml",
+      dataType: "json",
+      data: xmlRequest,
+      async: false,
+      success: function (response) {
+        if (response == null) return;
+
+        try {
+
+
+          for (i = 0; i < response.RESPONSE.RESULT[0].TrainAnnouncement.length; i++) {
+            item = response.RESPONSE.RESULT[0].TrainAnnouncement[i]
+
+            if (uniqueList[item.LocationSignature] == null) {
+              destinations.push({lat: parseFloat(Stations[item.LocationSignature].lat), lng: parseFloat(Stations[item.LocationSignature].lng)});
+              console.log(item);
+            }
+
+            uniqueList[item.LocationSignature] = item.ScheduledDepartureDateTime;
+            console.log(uniqueList)
+            console.log(item.LocationSignature)
+
+
+          }
+
+          trainPlan = destinations;
+        } catch (ex) {
+        }
+      }
+    });
+  }
+
+
 </script>
 </body>
 </html>
