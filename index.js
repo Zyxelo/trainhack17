@@ -26,6 +26,7 @@ app.use(function (req, res, next) {
   next();
 });
 
+app.use(express.static('public'));
 
 // Set up mongoDB
 mongoose.Promise = global.Promise;
@@ -38,7 +39,7 @@ mongoose.connect(config.mongodbUri, (error) => {
 
 app.get('/',function(req,res){
 
-  res.sendFile(path.join(__dirname+'/test.html'));
+  res.sendFile(path.join(__dirname+'/index.html'));
 
 });
 

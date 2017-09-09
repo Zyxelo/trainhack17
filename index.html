@@ -92,7 +92,7 @@
     });
 
     //const socket = io('http://3afb2dc2.ngrok.io/');
-    const socket = io('http://localhost:8080');
+    const socket = io($(location).attr('href'));
     socket.on('hej', (message) => {
       message = JSON.parse(message);
    // console.log(message);

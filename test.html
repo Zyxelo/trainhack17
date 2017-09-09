@@ -1,5 +1,7 @@
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml">
+{name: item.AdvertisedLocationName, coordinates: item.Geometry.split('(') }
+
 <head>
     <title></title>
     <link rel="stylesheet" href="http://code.jquery.com/ui/1.10.3/themes/smoothness/jquery-ui.css">
@@ -53,7 +55,7 @@
           "<LOGIN authenticationkey='6255f4ebaa394cce9cbdfcb2c58c6859' />" +
           "<QUERY objecttype='TrainStation'>" +
           "<FILTER/>" +
-          "<INCLUDE>Prognosticated</INCLUDE>" +
+          "<INCLUDE>Geometry.SWEREF99TM</INCLUDE>" +
           "<INCLUDE>AdvertisedLocationName</INCLUDE>" +
           "<INCLUDE>LocationSignature</INCLUDE>" +
           "</QUERY>" +
@@ -73,6 +75,7 @@
                 Stations[item.LocationSignature] = item.AdvertisedLocationName;
                 // Create an array to fill the search field autocomplete.
                 if (item.Prognosticated == true)
+                  console.log(item);
                   stationlist.push({ label: item.AdvertisedLocationName, value: item.LocationSignature });
               });
               fillSearchWidget(stationlist);
@@ -114,75 +117,117 @@
       }
 
       function Search() {
-        var sign = $("#station").data("sign");
-        // Clear html table
-        $('#timeTableDeparture tr:not(:first)').remove();
 
-        // Request to load announcements for a station by its signature
-        var xmlRequest = "<REQUEST version='1.0'>" +
+        var Stations = new Array();
+        var xmlRequest = "<REQUEST>" +
+          // Use your valid authenticationkey
           "<LOGIN authenticationkey='6255f4ebaa394cce9cbdfcb2c58c6859' />" +
-          "<QUERY objecttype='TrainAnnouncement' " +
-          "orderby='AdvertisedTimeAtLocation' >" +
-          "<FILTER>" +
-          "<AND>" +
-          "<OR>" +
-          "<AND>" +
-          "<GT name='AdvertisedTimeAtLocation' " +
-          "value='$dateadd(-00:15:00)' />" +
-          "<LT name='AdvertisedTimeAtLocation' " +
-          "value='$dateadd(14:00:00)' />" +
-          "</AND>" +
-          "<GT name='EstimatedTimeAtLocation' value='$now' />" +
-          "</OR>" +
-          "<EQ name='LocationSignature' value='" + sign + "' />" +
-          "<EQ name='ActivityType' value='Avgang' />" +
-          "</AND>" +
-          "</FILTER>" +
-          // Just include wanted fields to reduce response size.
-          "<INCLUDE>InformationOwner</INCLUDE>" +
-          "<INCLUDE>AdvertisedTimeAtLocation</INCLUDE>" +
-          "<INCLUDE>TrackAtLocation</INCLUDE>" +
-          "<INCLUDE>FromLocation</INCLUDE>" +
-          "<INCLUDE>ToLocation</INCLUDE>" +
+          "<QUERY objecttype='TrainStation'>" +
+          "<FILTER/>" +
+          "<INCLUDE>Geometry.WGS84</INCLUDE>" +
+          "<INCLUDE>AdvertisedLocationName</INCLUDE>" +
+          "<INCLUDE>LocationSignature</INCLUDE>" +
           "</QUERY>" +
           "</REQUEST>";
         $.ajax({
+          url: "http://api.trafikinfo.trafikverket.se/v1/data.json",
           type: "POST",
           contentType: "text/xml",
           dataType: "json",
           data: xmlRequest,
           success: function (response) {
             if (response == null) return;
-            if (response.RESPONSE.RESULT[0].TrainAnnouncement == null)
-              jQuery("#timeTableDeparture tr:last").
-              after("<tr><td colspan='4'>Inga avgångar hittades</td></tr>");
             try {
-              renderTrainAnnouncement(response.RESPONSE.RESULT[0].TrainAnnouncement);
+
+              $(response.RESPONSE.RESULT[0].TrainStation).each(function (iterator, item) {
+
+                console.log(item);
+                // Save a key/value list of stations
+                var latLongArray = item.Geometry.WGS84.split('(')[1].split(')')[0].split(' ');
+
+                Stations[item.LocationSignature] = {name: item.AdvertisedLocationName, lng: latLongArray[0], lat: latLongArray[1] };
+                // Create an array to fill the search field autocomplete.
+
+              });
+
             }
             catch (ex) { }
           }
         });
-      }
 
-      function renderTrainAnnouncement(announcement) {
-        $(announcement).each(function (iterator, item) {
-          var advertisedtime = new Date(item.AdvertisedTimeAtLocation);
-          var hours = advertisedtime.getHours()
-          var minutes = advertisedtime.getMinutes()
-          if (minutes < 10) minutes = "0" + minutes
-          var toList = new Array();
-          $(item.ToLocation).each(function (iterator, toItem) {
-            toList.push(Stations[toItem]);
-          });
-          var owner = "";
-          if (item.InformationOwner != null) owner = item.InformationOwner;
-          jQuery("#timeTableDeparture tr:last").
-          after("<tr><td>" + hours + ":" + minutes + "</td><td>" + toList.join(', ') +
-            "</td><td>" + owner + "</td><td style='text-align: center'>" + item.TrackAtLocation +
-            "</td></tr>");
+
+
+
+
+
+
+
+
+
+      }
+        var sign = $("#station").data("sign");
+        // Clear html table
+        $('#timeTableDeparture tr:not(:first)').remove();
+
+        // Request to load announcements for a station by its signature
+
+
+      function getStations(id) {
+        var destinations = [];
+        var uniqueList = {};
+        var destinations = [];
+        var xmlRequest = "<REQUEST version='1.0'>" +
+          "<LOGIN authenticationkey='6255f4ebaa394cce9cbdfcb2c58c6859' />" +
+          "<QUERY objecttype='TrainAnnouncement' " +
+          "orderby='AdvertisedTimeAtLocation' >" +
+          "<FILTER>" +
+
+
+          "<EQ name='AdvertisedTrainIdent' value='"+id+"' />" +
+
+          "</FILTER>" +
+          // Just include wanted fields to reduce response size.
+          "<INCLUDE>TechnicalTrainIdent</INCLUDE>" +
+          "<INCLUDE>AdvertisedTimeAtLocation</INCLUDE>" +
+          "<INCLUDE>LocationSignature</INCLUDE>" +
+          "<INCLUDE>FromLocation</INCLUDE>" +
+          "<INCLUDE>ToLocation</INCLUDE>" +
+          "<INCLUDE>ScheduledDepartureDateTime</INCLUDE>" +
+          "</QUERY>" +
+          "</REQUEST>";
+        $.ajax({
+          url: "http://api.trafikinfo.trafikverket.se/v1/data.json",
+          type: "POST",
+          contentType: "text/xml",
+          dataType: "json",
+          data: xmlRequest,
+          success: function (response) {
+            if (response == null) return;
+
+            try {
+
+
+              for (i = 0; i < response.RESPONSE.RESULT[0].TrainAnnouncement.length; i++) {
+                item = response.RESPONSE.RESULT[0].TrainAnnouncement[i]
+
+                if (uniqueList[item.LocationSignature] == null) {
+                  destinations.push(Stations[item.LocationSignature]);
+                  console.log(item);
+                }
+
+                uniqueList[item.LocationSignature] = item.ScheduledDepartureDateTime;
+                console.log(uniqueList)
+                console.log(item.LocationSignature)
+
+
+              }
+
+              trainPlan = destinations;
+            } catch (ex) {
+            }
+          }
         });
       }
-
     </script>
 </head>
 <body>
