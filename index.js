@@ -1,14 +1,10 @@
-import config from './config';
-import express from 'express';
-import locationRoutes from './routes/location';
-import bodyParser from 'body-parser';
-import mongoose from 'mongoose';
-import WebSocket from 'ws';
-import nmea from 'nmea-0183';
-import socket from 'socket.io';
-import socketHandler from './socket/socket';
-import path from 'path';
-import ioClient from 'socket.io-client';
+var express = require('express');
+var bodyParser=require('body-parser');
+var WebSocket=require('ws');
+var nmea =require('nmea-0183');
+var socket=require('socket.io');
+var path=require('path');
+
 
 const app = express();
 
@@ -28,34 +24,23 @@ app.use(function (req, res, next) {
 
 app.use(express.static('public'));
 
-// Set up mongoDB
-mongoose.Promise = global.Promise;
-mongoose.connect(config.mongodbUri, (error) => {
-  if (error) {
-    throw error;
-  }
-});
+
 
 
 app.get('/',function(req,res){
-
   res.sendFile(path.join(__dirname+'/index.html'));
 
 });
 
 
 
-app.use('/location', locationRoutes);
-
-const server = app.listen(config.port, () => {
-  console.info('Express listening on port', config.port);
+const server = app.listen(process.env.PORT || 8080, () => {
+  console.info('Express listening on port', process.env.PORT || 8080);
 });
 
 const io = socket(server);
 
 
-// set up socket.io
-io.on('connection', socketHandler);
 
 
 
@@ -70,7 +55,6 @@ ws.on('message', (data) => {
   GPGGAObject.trainID = trainInfo[16].split('.')[0];
   GPGGAObject.publicTrainID = trainInfo[16];
   if (trainInfo[16]) {
-    //trainInfo[16].split('.')[0]);
     io.emit('hej', JSON.stringify(GPGGAObject, null, 2));
   }
 })
