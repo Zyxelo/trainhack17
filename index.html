@@ -245,8 +245,8 @@
     });
 
     //const socket = io('http://3afb2dc2.ngrok.io/');
-    var adress = $(location).attr('href');
-    const socket = io(adress);
+    console.log();
+    const socket = io($(location).attr('href'));
     socket.on('hej', (message) => {
       message = JSON.parse(message);
    // console.log(message);

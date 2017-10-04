@@ -14,13 +14,7 @@ app.use(bodyParser.json());
 
 
 // Allow requests from the front end server
-app.use(function (req, res, next) {
-  res.header("Access-Control-Allow-Origin", "http://localhost:3000");
-  res.header("Access-Control-Allow-Credentials", "true");
-  res.header("Access-Control-Allow-Headers", "Authorization, Access-Control-Allow-Headers, Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers");
-  res.header("Access-Control-Allow-Methods", "GET, PUT, OPTIONS, POST, DELETE");
-  next();
-});
+
 
 app.use(express.static('public'));
 
@@ -31,6 +25,7 @@ app.get('/',function(req,res){
   res.sendFile(path.join(__dirname+'/index.html'));
 
 });
+
 
 
 
