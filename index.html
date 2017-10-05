@@ -196,40 +196,15 @@
   var Stations = new Array();
   $(document).ready(function() {
 
-    var xmlRequest = "<REQUEST>" +
-      // Use your valid authenticationkey
-      "<LOGIN authenticationkey='6255f4ebaa394cce9cbdfcb2c58c6859' />" +
-      "<QUERY objecttype='TrainStation'>" +
-      "<FILTER/>" +
-      "<INCLUDE>Geometry.WGS84</INCLUDE>" +
-      "<INCLUDE>AdvertisedLocationName</INCLUDE>" +
-      "<INCLUDE>LocationSignature</INCLUDE>" +
-      "</QUERY>" +
-      "</REQUEST>";
     $.ajax({
-      url: "http://api.trafikinfo.trafikverket.se/v1/data.json",
-      type: "POST",
-      contentType: "text/xml",
-      dataType: "json",
-      data: xmlRequest,
+      url: "/getstations",
+      type: "GET",
       success: function (response) {
-        if (response == null) return;
-        try {
+        console.log(response)
+        Stations = response;
 
-          $(response.RESPONSE.RESULT[0].TrainStation).each(function (iterator, item) {
-
-           // console.log(item);
-            // Save a key/value list of stations
-            var latLongArray = item.Geometry.WGS84.split('(')[1].split(')')[0].split(' ');
-
-            Stations[item.LocationSignature] = {name: item.AdvertisedLocationName, lng: latLongArray[0], lat: latLongArray[1] };
-            // Create an array to fill the search field autocomplete.
-
-          });
-
-        }
-        catch (ex) { }
       }
+
     });
 
     var markers = {};
@@ -420,59 +395,21 @@
   }
 
   function getStations(id) {
-    var destinations = [];
-    var uniqueList = {};
-    var destinations = [];
-    var xmlRequest = "<REQUEST version='1.0'>" +
-      "<LOGIN authenticationkey='6255f4ebaa394cce9cbdfcb2c58c6859' />" +
-      "<QUERY objecttype='TrainAnnouncement' " +
-      "orderby='AdvertisedTimeAtLocation' >" +
-      "<FILTER>" +
-
-
-      "<EQ name='AdvertisedTrainIdent' value='"+id+"' />" +
-
-      "</FILTER>" +
-      // Just include wanted fields to reduce response size.
-      "<INCLUDE>TechnicalTrainIdent</INCLUDE>" +
-      "<INCLUDE>AdvertisedTimeAtLocation</INCLUDE>" +
-      "<INCLUDE>LocationSignature</INCLUDE>" +
-      "<INCLUDE>FromLocation</INCLUDE>" +
-      "<INCLUDE>ToLocation</INCLUDE>" +
-      "<INCLUDE>ScheduledDepartureDateTime</INCLUDE>" +
-      "</QUERY>" +
-      "</REQUEST>";
     $.ajax({
-      url: "http://api.trafikinfo.trafikverket.se/v1/data.json",
+      url: "/getstations/postid",
       type: "POST",
-      contentType: "text/xml",
-      dataType: "json",
-      data: xmlRequest,
+      data: {"id": id},
       async: false,
       success: function (response) {
-        if (response == null) return;
-
-        try {
-
-
-          for (i = 0; i < response.RESPONSE.RESULT[0].TrainAnnouncement.length; i++) {
-            item = response.RESPONSE.RESULT[0].TrainAnnouncement[i]
-
-            if (uniqueList[item.LocationSignature] == null) {
-              destinations.push({lat: parseFloat(Stations[item.LocationSignature].lat), lng: parseFloat(Stations[item.LocationSignature].lng)});
-              console.log(item);
-            }
-
-            uniqueList[item.LocationSignature] = item.ScheduledDepartureDateTime;
-            console.log(uniqueList)
-            console.log(item.LocationSignature)
-
-
-          }
+        console.log(response)
+        destinations = []
+        for(var i=0; i<response.length; i++) {
+          item = response[i];
+          destinations.push({lat: parseFloat(Stations[item.LocationSignature].lat), lng: parseFloat(Stations[item.LocationSignature].lng)})
+        }
 
           trainPlan = destinations;
-        } catch (ex) {
-        }
+
       }
     });
   }

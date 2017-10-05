@@ -4,6 +4,7 @@ var WebSocket=require('ws');
 var nmea =require('nmea-0183');
 var socket=require('socket.io');
 var path=require('path');
+var getstations = require('./routes/getstations');
 
 
 const app = express();
@@ -11,6 +12,7 @@ const app = express();
 
 // Use bodyparser to handle the parsing of JSON (for all routes)
 app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
 
 
 // Allow requests from the front end server
@@ -22,10 +24,12 @@ app.use(express.static('public'));
 
 
 app.get('/',function(req,res){
+
   res.sendFile(path.join(__dirname+'/index.html'));
 
 });
 
+app.use('/getstations', getstations);
 
 
 
